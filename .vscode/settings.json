@@ -1,0 +1,15 @@
+{
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": false,
+    "[javascript]": {
+        "editor.formatOnSave": true
+    },
+    "[json]": {
+        "editor.formatOnSave": true
+    },
+    "[graphql]": {
+        "editor.formatOnSave": true
+    },
+    "prettier.configPath": "prettier.config.js",
+    "prettier.prettierPath": "node_modules\\prettier"
+}

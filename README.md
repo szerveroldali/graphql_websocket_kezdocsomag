@@ -24,7 +24,7 @@ Kezdőcsomag a Szerveroldali webprogramozás tárgy GraphQL & Websocket (Socket.
 Ez a kezdőcsomag teljes mértékben elő van készítve, ezért a használatba vételéhez mindössze az NPM-es csomagok telepítésére van szükség, amit az alábbi parancsok valamelyikének kiadásával tehetsz meg:
 
 ```
-npm i VAGY npm install
+npm i --legacy-peer-deps VAGY npm install --legacy-peer-deps
 ```
 
 A csomagok telepítését érdemes jóval a ZH kezdete előtt elvégezni, hogyha bármilyen okból nem sikerül, akkor legyen időd megoldani a hibát, vagy felvenni a gyakorlatvezetőddel a kapcsolatot.

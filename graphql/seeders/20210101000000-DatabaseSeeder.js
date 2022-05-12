@@ -1,9 +1,10 @@
 "use strict";
 
-const faker = require("faker");
+// Faker dokumentáció, API referencia: https://fakerjs.dev/guide/#node-js
+const { faker } = require("@faker-js/faker");
 const models = require("../models");
 const { User /* ... */ } = models;
-const colors = require("colors");
+const chalk = require("chalk");
 
 module.exports = {
     up: async (queryInterface, Sequelize) => {
@@ -31,17 +32,15 @@ module.exports = {
 
             // Egyéb...
 
-            console.log("A DatabaseSeeder lefutott".green);
+            console.log(chalk.green("A DatabaseSeeder lefutott"));
         } catch (e) {
             // Ha a seederben valamilyen hiba van, akkor alapértelmezés szerint elég szegényesen írja
             // ki azokat a rendszer a seeder futtatásakor. Ezért ez Neked egy segítség, hogy láthasd a
             // hiba részletes kiírását.
             // Így ha valamit elrontasz a seederben, azt könnyebben tudod debug-olni.
-            console.log("A DatabaseSeeder nem futott le teljesen, mivel az alábbi hiba történt:".red);
-            console.log(colors.gray(e));
+            console.log(chalk.red("A DatabaseSeeder nem futott le teljesen, mivel az alábbi hiba történt:"));
+            console.log(chalk.gray(e));
         }
-
-        console.log("A DatabaseSeeder lefutott");
     },
 
     down: async (queryInterface, Sequelize) => {

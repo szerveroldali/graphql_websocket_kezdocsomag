@@ -1,3 +1,10 @@
 type Query {
+    # Elemi példa:
+    helloWorld: String
+
+    # Példa paraméterezésre:
+    helloName(name: String!): String
+
+    # Példa hitelesítésre:
     helloAuth: String
 }

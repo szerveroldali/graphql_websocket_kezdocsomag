@@ -23,9 +23,7 @@ Kezdőcsomag a Szerveroldali webprogramozás tárgy GraphQL & Websocket (Socket.
 
 Ez a kezdőcsomag teljes mértékben elő van készítve, ezért a használatba vételéhez mindössze az NPM-es csomagok telepítésére van szükség, amit az alábbi parancsok valamelyikének kiadásával tehetsz meg:
 
-```
-npm i --legacy-peer-deps VAGY npm install --legacy-peer-deps
-```
+`npm i` VAGY `npm install`
 
 A csomagok telepítését érdemes jóval a ZH kezdete előtt elvégezni, hogyha bármilyen okból nem sikerül, akkor legyen időd megoldani a hibát, vagy felvenni a gyakorlatvezetőddel a kapcsolatot.
 
@@ -67,12 +65,13 @@ Miután telepítetted az NPM-es csomagokat, az alábbi parancsok érhetők el a 
 
 ## Ajánlott kliensek
 
-- GraphQL: Ehhez két beépített klienst is ad a kezdőcsomag, javasolt a Playground használata
-  - GraphiQL: http://localhost:4000/graphql
-  - Playground: http://localhost:4000/playground
+- GraphQL:
+  - [Beépített GraphQL Playground](http://localhost:4000/graphql)
+  - [Postman](https://www.postman.com/downloads/)
+  - [Firecamp](https://firecamp.io/download)
 - Websocket (Socket.IO):
-  - Postman
-  - Firecamp
+  - [Postman](https://www.postman.com/downloads/)
+  - [Firecamp](https://firecamp.io/download)
 
 ## Ajánlott kiegészítők
 

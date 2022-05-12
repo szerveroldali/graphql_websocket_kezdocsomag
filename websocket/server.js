@@ -36,7 +36,7 @@ AutoTester.handleSocketIO(io, db);
 // Elindítjuk a sima Node.js HTTP szervert, amin a Socket.io is fut
 const port = process.env.PORT || 3000;
 httpServer.listen(port, () => {
-    console.log(`A Socket.IO szervere fut, ezen a porton: ${port}`);
+    console.log(`A Socket.IO szerver fut, ezen a porton: ${port}`);
     // FONTOS! Erre szükség van, hogy az automata tesztelő megfelelően tudjon inicializálni!
     AutoTester.handleStart();
 });

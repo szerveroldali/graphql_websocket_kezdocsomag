@@ -1,21 +1,16 @@
-const { graphqlHTTP } = require("express-graphql");
-const { makeExecutableSchema } = require("@graphql-tools/schema");
 const { readFileSync } = require("fs");
 const { join: pathJoin } = require("path");
+const { ApolloServer } = require("apollo-server-express");
+const { ApolloServerPluginLandingPageGraphQLPlayground } = require("apollo-server-core");
 const { typeDefs: scalarsTypeDefs, resolvers: scalarsResolvers } = require("graphql-scalars");
 
-const ourTypeDefs = readFileSync(pathJoin(__dirname, "./typedefs.gql")).toString();
-const ourResolvers = require("./resolvers");
-
-const executableSchema = makeExecutableSchema({
-    typeDefs: [scalarsTypeDefs, ourTypeDefs],
-    resolvers: [scalarsResolvers, ourResolvers],
+const apolloServerInstance = new ApolloServer({
+    typeDefs: [scalarsTypeDefs, readFileSync(pathJoin(__dirname, "./typedefs.gql")).toString()],
+    resolvers: [scalarsResolvers, require("./resolvers")],
+    plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
 });
 
-module.exports = graphqlHTTP({
-    schema: executableSchema,
-    graphiql: {
-        // Lehessen HTTP fejlécelemeket is küldeni a kéréssel
-        headerEditorEnabled: true,
-    },
-});
+module.exports = async (expressAppInstance) => {
+    await apolloServerInstance.start();
+    apolloServerInstance.applyMiddleware({ app: expressAppInstance, path: "/graphql" });
+};

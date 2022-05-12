@@ -5,19 +5,13 @@ const app = express();
 const { StatusCodes, ReasonPhrases } = require("http-status-codes");
 const fs = require("fs").promises;
 const date = require("date-and-time");
-const expressPlayground = require("graphql-playground-middleware-express").default;
+const chalk = require("chalk");
 const AutoTester = require("./test/inject");
 
 app.use(express.json());
 
 // Bejelentkezés, regisztráció
 app.use("/auth", require("./routers/auth"));
-
-// GraphQL végpont + GraphiQL felület
-app.use("/graphql", require("./graphql"));
-
-// GraphQL Playground felület
-app.get("/playground", expressPlayground({ endpoint: "/graphql" }));
 
 // Végső middleware a default error handler felülírásához, így az nem
 // HTML kimenetet fog adni, hanem JSON objektumot, továbbá egy log fájlba
@@ -47,11 +41,15 @@ app.use(async (err, req, res, next) => {
     });
 });
 
-// App indítása a megadott porton
+// Express app indítása a megadott porton
 (async () => {
     const port = process.env.PORT || 4000;
+
+    await require("./graphql")(app);
+
     app.listen(port, () => {
-        console.log(`Az Express app fut, ezen a porton: ${port}`);
+        console.log(`Az Express app fut, ezen a porton: ${chalk.yellow(port)}`);
+        console.log(`GraphQL végpont: ${chalk.yellow(`http://127.0.0.1:${port}/graphql`)}`);
 
         // FONTOS! Erre szükség van, hogy az automata tesztelő megfelelően tudjon inicializálni!
         // Ehhez a sorhoz ne nyúlj a munkád közben: hagyd legalul, ne vedd ki, ne kommenteld ki,

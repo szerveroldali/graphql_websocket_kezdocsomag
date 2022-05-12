@@ -1,4 +1,5 @@
-const faker = require("faker");
+// Faker dokumentáció, API referencia: https://fakerjs.dev/guide/#node-js
+const { faker } = require("@faker-js/faker");
 const Joi = require("joi");
 //const { v4: uuidv4 } = require('uuid');
 const validate = require("./validate");

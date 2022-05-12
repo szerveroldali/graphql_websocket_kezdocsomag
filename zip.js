@@ -7,14 +7,15 @@ const glob = require("glob");
 const inquirer = require("inquirer");
 const fs = require("fs").promises;
 const { promisify } = require("util");
-const colors = require("colors");
+const chalk = require("chalk");
 const date = require("date-and-time");
 const Zip = require("adm-zip");
 const path = require("path");
 const slug = require("slug");
 const filesize = require("filesize");
-const _ = require("loadsh");
-const config = require("./zip.config");
+const _ = require("lodash");
+//const config = require("./config/zipper.json");
+const config = require("./zip.config.js");
 
 const pGlob = promisify(glob);
 const currentDate = new Date();
@@ -22,6 +23,7 @@ const currentDate = new Date();
 // Nyilatkozat sablon
 const statementTemplate = `NYILATKOZAT
 ===========
+
 Én, {NAME} (Neptun kód: {NEPTUN}) kijelentem, hogy ezt a megoldást én küldtem be a "{SUBJECT}" tárgy "{TASK}" nevű számonkéréséhez.
 A feladat beadásával elismerem, hogy tudomásul vettem a nyilatkozatban foglaltakat.
 - Kijelentem, hogy ez a megoldás a saját munkám.
@@ -29,7 +31,9 @@ A feladat beadásával elismerem, hogy tudomásul vettem a nyilatkozatban foglal
 - Kijelentem, hogy nem továbbítottam megoldást hallgatótársaimnak, és nem is tettem azt közzé.
 - Tudomásul vettem, hogy az Eötvös Loránd Tudományegyetem Hallgatói Követelményrendszere (ELTE szervezeti és működési szabályzata, II. Kötet, 74/C. §) kimondja, hogy mindaddig, amíg egy hallgató egy másik hallgató munkáját - vagy legalábbis annak jelentős részét - saját munkájaként mutatja be, az fegyelmi vétségnek számít.
 - Tudomásul vettem, hogy a fegyelmi vétség legsúlyosabb következménye a hallgató elbocsátása az egyetemről.
-Kelt: {DATE}`;
+
+Kelt: {DATE}
+`;
 
 // Reguláris kifejezés nevesített csoportokkal, amivel bekérhetők a nyilatkozatban lévő adatok
 const statementRegex = new RegExp(
@@ -70,19 +74,19 @@ const collectFiles = async () =>
 const zipFiles = async (files, { name, neptun }) => {
     const zip = new Zip();
     for (const file of files) {
-        process.stdout.write(`   * becsomagolás: ${colors.grey(file)}... `);
+        process.stdout.write(`   * becsomagolás: ${chalk.grey(file)}... `);
         zip.addLocalFile(file, path.parse(file).dir);
-        console.log(colors.green("OK."));
+        console.log(chalk.green("OK."));
     }
-    const formattedDate = date.format(new Date(), "YYMMDDHHmmss");
+    const formattedDate = date.format(new Date(), "YYYYMMDD_HHmmss");
     const nameSlug = slug(name, { replacement: "_", lower: false });
     const task = slug(config.task, { replacement: "_" });
     const zipName = `${nameSlug}_${neptun}_${task}_${formattedDate}.zip`;
     const zipPath = `zipfiles/${zipName}`;
-    process.stdout.write(" 3. Archívum mentése ide: " + colors.gray(zipPath) + "... ");
+    process.stdout.write(" 3. Archívum mentése ide: " + chalk.gray(zipPath) + "... ");
     zip.writeZip(zipPath);
     const zipSize = filesize((await fs.stat(zipPath)).size);
-    console.log(colors.white(`${colors.green("OK")}, méret: ${colors.gray(zipSize)}.`));
+    console.log(chalk.white(`${chalk.green("OK")}, méret: ${chalk.gray(zipSize)}.`));
 };
 
 const handleStatement = async () => {
@@ -92,10 +96,10 @@ const handleStatement = async () => {
     if (data.exists) {
         if (data.valid) {
             console.log(
-                colors.green(
-                    `>> A nyilatkozat (${colors.yellow("statement.txt")}) korábban ki lett töltve ${colors.yellow(
+                chalk.green(
+                    `>> A nyilatkozat (${chalk.yellow("statement.txt")}) korábban ki lett töltve ${chalk.yellow(
                         data.name
-                    )} névre és ${colors.yellow(data.neptun)} Neptun kódra.`
+                    )} névre és ${chalk.yellow(data.neptun)} Neptun kódra.`
                 )
             );
             console.log(" ");
@@ -103,7 +107,7 @@ const handleStatement = async () => {
             return { name: data.name, neptun: data.neptun };
         } else {
             console.log(
-                colors.yellow(`>> A nyilatkozat (${colors.white("statement.txt")}) létezik, de úgy értékeltük, hogy a tartalma érvénytelen.`)
+                chalk.yellow(`>> A nyilatkozat (${chalk.white("statement.txt")}) létezik, de úgy értékeltük, hogy a tartalma érvénytelen.`)
             );
             console.log(" ");
         }
@@ -111,7 +115,7 @@ const handleStatement = async () => {
 
     // Nyilatkozat szövegének megjelenítése
     for (const line of statementTemplate.split("\n")) {
-        console.log(`${line}`.gray);
+        console.log(chalk.gray(line));
     }
     console.log(" ");
 
@@ -129,11 +133,14 @@ const handleStatement = async () => {
     ]);
 
     if (accepted === "igen") {
-        console.log(">> Elfogadtad a nyilatkozatot. Kérjük, add meg az adataidat, hogy be tudjuk azokat helyettesíteni a nyilatkozatba.".green);
+        console.log(
+            chalk.green(">> Elfogadtad a nyilatkozatot. Kérjük, add meg az adataidat, hogy be tudjuk azokat helyettesíteni a nyilatkozatba.")
+        );
     } else {
         console.log(
-            ">> A tárgy követelményei szerint a nyilatkozat elfogadása és mellékelése kötelező, ezért ha nem fogadod el, akkor nem tudjuk értékelni a zárthelyidet."
-                .red
+            chalk.red(
+                ">> A tárgy követelményei szerint a nyilatkozat elfogadása és mellékelése kötelező, ezért ha nem fogadod el, akkor nem tudjuk értékelni a zárthelyidet."
+            )
         );
         throw new Error("StatementDenied");
     }
@@ -198,8 +205,8 @@ const handleStatement = async () => {
             .replace("{DATE}", date.format(currentDate, "YYYY. MM. DD. HH:mm:ss"))
     );
     console.log(
-        colors.green(
-            `>> A nyilatkozat (${colors.yellow("statement.txt")}) sikeresen ki lett töltve ${colors.yellow(name)} névre és ${colors.yellow(
+        chalk.green(
+            `>> A nyilatkozat (${chalk.yellow("statement.txt")}) sikeresen ki lett töltve ${chalk.yellow(name)} névre és ${chalk.yellow(
                 neptun
             )} Neptun kódra.`
         )
@@ -218,7 +225,7 @@ const handleZipping = async ({ name, neptun }) => {
     // Fájlok listájának előállítása, majd az alapján becsomagolás
     process.stdout.write(" 1. Fájlok összegyűjtése... ");
     const files = await collectFiles();
-    console.log(colors.green("OK."));
+    console.log(chalk.green("OK."));
 
     console.log(" 2. Fájlok becsomagolása...");
     await zipFiles(files, { name, neptun });
@@ -226,21 +233,21 @@ const handleZipping = async ({ name, neptun }) => {
 
 (async () => {
     try {
-        console.log("1. lépés: Nyilatkozat".bgGray.black);
+        console.log(chalk.bgGray.black("1. lépés: Nyilatkozat"));
         console.log(" ");
         const { name, neptun } = await handleStatement();
 
-        console.log("2. lépés: Fájlok becsomagolása".bgGray.black);
+        console.log(chalk.bgGray.black("2. lépés: Fájlok becsomagolása"));
         console.log(" ");
         await handleZipping({ name, neptun });
 
         // Tudnivalók megjelenítése
         console.log(" ");
-        console.log(colors.yellow(" * A feladatot a Canvas rendszeren keresztül kell beadni a határidő lejárta előtt."));
+        console.log(chalk.yellow(" * A feladatot a Canvas rendszeren keresztül kell beadni a határidő lejárta előtt."));
         console.log(" ");
-        console.log(colors.yellow(" * Az időkeret utolsó 15 percét a beadás nyugodt és helyes elvégzésére adjuk."));
-        console.log(colors.yellow(" * A feladat megfelelő, hiánytalan beadása a hallgató felelőssége!"));
-        console.log(colors.yellow(" * Utólagos reklamációra nincs lehetőség! Mindenképp ellenőrizd a .zip fájlt, mielőtt beadod!"));
+        console.log(chalk.yellow(" * Az időkeret utolsó 15 percét a beadás nyugodt és helyes elvégzésére adjuk."));
+        console.log(chalk.yellow(" * A feladat megfelelő, hiánytalan beadása a hallgató felelőssége!"));
+        console.log(chalk.yellow(" * Utólagos reklamációra nincs lehetőség! Mindenképp ellenőrizd a .zip fájlt, mielőtt beadod!"));
     } catch (e) {
         if (e.message === "StatementDenied") {
             return;

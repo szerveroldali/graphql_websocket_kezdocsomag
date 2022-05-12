@@ -1,4 +1,4 @@
-const jwt = require("express-jwt");
+const { expressjwt: jwt } = require("express-jwt");
 
 module.exports = jwt({
     secret: process.env.JWT_SECRET || "secret",

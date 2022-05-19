@@ -12,18 +12,42 @@ const date = require("date-and-time");
 const Zip = require("adm-zip");
 const path = require("path");
 const slug = require("slug");
-const filesize = require("filesize");
+const filesize = require("filesize").partial({ base: 2, standard: "jedec" });
 const _ = require("lodash");
-//const config = require("./config/zipper.json");
+const crypto = require("crypto");
+const { table } = require("table");
+const indentString = require("indent-string");
 const config = require("./zip.config.js");
 
 const pGlob = promisify(glob);
 const currentDate = new Date();
 
+const tableconfig = {
+    border: {
+        topBody: `─`,
+        topJoin: `┬`,
+        topLeft: `┌`,
+        topRight: `┐`,
+
+        bottomBody: `─`,
+        bottomJoin: `┴`,
+        bottomLeft: `└`,
+        bottomRight: `┘`,
+
+        bodyLeft: `│`,
+        bodyRight: `│`,
+        bodyJoin: `│`,
+
+        joinBody: `─`,
+        joinLeft: `├`,
+        joinRight: `┤`,
+        joinJoin: `┼`,
+    },
+};
+
 // Nyilatkozat sablon
 const statementTemplate = `NYILATKOZAT
 ===========
-
 Én, {NAME} (Neptun kód: {NEPTUN}) kijelentem, hogy ezt a megoldást én küldtem be a "{SUBJECT}" tárgy "{TASK}" nevű számonkéréséhez.
 A feladat beadásával elismerem, hogy tudomásul vettem a nyilatkozatban foglaltakat.
 - Kijelentem, hogy ez a megoldás a saját munkám.
@@ -71,13 +95,17 @@ const collectFiles = async () =>
         nodir: true,
     });
 
+const checksum = (content) => {
+    return crypto.createHash("md5").update(content, "utf8").digest("hex");
+};
+
 const zipFiles = async (files, { name, neptun }) => {
+    process.stdout.write(" 2. Fájlok becsomagolása... ");
     const zip = new Zip();
     for (const file of files) {
-        process.stdout.write(`   * becsomagolás: ${chalk.grey(file)}... `);
         zip.addLocalFile(file, path.parse(file).dir);
-        console.log(chalk.green("OK."));
     }
+    console.log(chalk.green("OK."));
     const formattedDate = date.format(new Date(), "YYYYMMDD_HHmmss");
     const nameSlug = slug(name, { replacement: "_", lower: false });
     const task = slug(config.task, { replacement: "_" });
@@ -86,7 +114,48 @@ const zipFiles = async (files, { name, neptun }) => {
     process.stdout.write(" 3. Archívum mentése ide: " + chalk.gray(zipPath) + "... ");
     zip.writeZip(zipPath);
     const zipSize = filesize((await fs.stat(zipPath)).size);
-    console.log(chalk.white(`${chalk.green("OK")}, méret: ${chalk.gray(zipSize)}.`));
+    console.log(chalk.white(`${chalk.green("OK")}. Méret: ${chalk.gray(zipSize)}.`));
+
+    console.log(" 4. Becsomagolt fájlok ellenőrzése:");
+    var zipFile = new Zip(zipPath);
+    const checksumTable = [["Fájl", "Eredeti fájl ellenőrző összege", "Becsomagolt fájl ellenőrző összege", "Eredmény"]];
+    let checksumMismatch = false;
+    for (const file of files) {
+        const originalFileChecksum = checksum(await fs.readFile(file));
+        const zippedFileChecksum = checksum(zipFile.getEntry(file).getData());
+        if (originalFileChecksum !== zippedFileChecksum) {
+            checksumMismatch = true;
+        }
+        checksumTable.push([
+            chalk.yellow(file),
+            chalk.gray(originalFileChecksum),
+            chalk.gray(zippedFileChecksum),
+            originalFileChecksum === zippedFileChecksum ? chalk.green("SÉRTETLEN") : chalk.red("SÉRÜLT?"),
+        ]);
+    }
+    console.log(indentString(table(checksumTable, tableconfig), 4));
+
+    console.log(
+        indentString(
+            chalk.white(
+                `Ha egy fájl neve mellett a ${chalk.green(
+                    "SÉRTETLEN"
+                )} jelző szerepel, az azt jelenti, hogy az ellenőrzés alapján sértetlenül be lett csomagolva a zip-be.`
+            ),
+            4
+        )
+    );
+
+    if (checksumMismatch) {
+        console.log(
+            indentString(
+                chalk.bgRed.white(
+                    `${chalk.bold("FIGYELEM!")} Úgy érzékeltük, hogy legalább egy fájl sérült lehet. Próbáld újra a becsomagolást!`
+                )
+            ),
+            4
+        );
+    }
 };
 
 const handleStatement = async () => {
@@ -102,6 +171,13 @@ const handleStatement = async () => {
                     )} névre és ${chalk.yellow(data.neptun)} Neptun kódra.`
                 )
             );
+            console.log(
+                chalk.green(
+                    `   Ha a megadott adatok hibásak, töröld a ${chalk.yellow("statement.txt")} fájlt és hívd meg újra a zip parancsot a`
+                )
+            );
+            console.log(chalk.green(`   nyilatkozat kitöltő újboli eléréséhez.`));
+
             console.log(" ");
             // Ha korábban ki lett töltve, itt végeztünk is
             return { name: data.name, neptun: data.neptun };
@@ -114,7 +190,11 @@ const handleStatement = async () => {
     }
 
     // Nyilatkozat szövegének megjelenítése
-    for (const line of statementTemplate.split("\n")) {
+    const statementTemplateReplaced = statementTemplate
+        .replace("{SUBJECT}", config.subject)
+        .replace("{TASK}", config.task)
+        .replace("{DATE}", date.format(currentDate, "YYYY. MM. DD."));
+    for (const line of statementTemplateReplaced.split("\n")) {
         console.log(chalk.gray(line));
     }
     console.log(" ");
@@ -138,7 +218,7 @@ const handleStatement = async () => {
         );
     } else {
         console.log(
-            chalk.red(
+            chalk.bgRed.white(
                 ">> A tárgy követelményei szerint a nyilatkozat elfogadása és mellékelése kötelező, ezért ha nem fogadod el, akkor nem tudjuk értékelni a zárthelyidet."
             )
         );
@@ -227,7 +307,6 @@ const handleZipping = async ({ name, neptun }) => {
     const files = await collectFiles();
     console.log(chalk.green("OK."));
 
-    console.log(" 2. Fájlok becsomagolása...");
     await zipFiles(files, { name, neptun });
 };
 
@@ -237,14 +316,15 @@ const handleZipping = async ({ name, neptun }) => {
         console.log(" ");
         const { name, neptun } = await handleStatement();
 
-        console.log(chalk.bgGray.black("2. lépés: Fájlok becsomagolása"));
+        console.log(chalk.bgGray.black("2. lépés: Becsomagolás"));
         console.log(" ");
         await handleZipping({ name, neptun });
 
         // Tudnivalók megjelenítése
         console.log(" ");
-        console.log(chalk.yellow(" * A feladatot a Canvas rendszeren keresztül kell beadni a határidő lejárta előtt."));
+        console.log(chalk.bgGray.black("Tudnivalók"));
         console.log(" ");
+        console.log(chalk.yellow(" * A feladatot a Canvas rendszeren keresztül kell beadni a határidő lejárta előtt."));
         console.log(chalk.yellow(" * Az időkeret utolsó 15 percét a beadás nyugodt és helyes elvégzésére adjuk."));
         console.log(chalk.yellow(" * A feladat megfelelő, hiánytalan beadása a hallgató felelőssége!"));
         console.log(chalk.yellow(" * Utólagos reklamációra nincs lehetőség! Mindenképp ellenőrizd a .zip fájlt, mielőtt beadod!"));

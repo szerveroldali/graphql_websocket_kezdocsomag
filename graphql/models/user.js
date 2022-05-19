@@ -4,7 +4,9 @@ const bcrypt = require("bcrypt");
 
 module.exports = (sequelize, DataTypes) => {
     class User extends Model {
-        static associate(models) {}
+        static associate(models) {
+            // TODO: Kapcsolatok megadása, ha szükséges
+        }
 
         comparePassword(password) {
             return bcrypt.compareSync(password, this.password);

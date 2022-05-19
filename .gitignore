@@ -1,3 +1,4 @@
 node_modules
 package-lock.json
 statement.txt
+*.sqlite

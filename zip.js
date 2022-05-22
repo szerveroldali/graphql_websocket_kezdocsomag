@@ -17,12 +17,15 @@ const _ = require("lodash");
 const crypto = require("crypto");
 const { table } = require("table");
 const indentString = require("indent-string");
+const treeify = require("object-treeify");
+const stripAnsi = require("strip-ansi");
+const { isBinaryFileSync } = require("isbinaryfile");
 const config = require("./zip.config.js");
 
 const pGlob = promisify(glob);
 const currentDate = new Date();
 
-const tableconfig = {
+const tableConfig = {
     border: {
         topBody: `─`,
         topJoin: `┬`,
@@ -115,45 +118,94 @@ const zipFiles = async (files, { name, neptun }) => {
     zip.writeZip(zipPath);
     const zipSize = filesize((await fs.stat(zipPath)).size);
     console.log(chalk.white(`${chalk.green("OK")}. Méret: ${chalk.gray(zipSize)}.`));
+    return { zippedFiles: files, zipPath };
+};
 
-    console.log(" 4. Becsomagolt fájlok ellenőrzése:");
-    var zipFile = new Zip(zipPath);
-    const checksumTable = [["Fájl", "Eredeti fájl ellenőrző összege", "Becsomagolt fájl ellenőrző összege", "Eredmény"]];
-    let checksumMismatch = false;
-    for (const file of files) {
-        const originalFileChecksum = checksum(await fs.readFile(file));
-        const zippedFileChecksum = checksum(zipFile.getEntry(file).getData());
-        if (originalFileChecksum !== zippedFileChecksum) {
-            checksumMismatch = true;
-        }
-        checksumTable.push([
-            chalk.yellow(file),
-            chalk.gray(originalFileChecksum),
-            chalk.gray(zippedFileChecksum),
-            originalFileChecksum === zippedFileChecksum ? chalk.green("SÉRTETLEN") : chalk.red("SÉRÜLT?"),
-        ]);
+const checkZip = async (zippedFiles, zipPath) => {
+    console.log(" Becsomagolt fájlok áttekintése:");
+    const zipFile = new Zip(zipPath);
+    let fileTree = {};
+    let checksumMismatches = [];
+    for (const file of zippedFiles) {
+        const parsed = path.parse(file);
+        const originalFileContentBuffer = await fs.readFile(file);
+        const originalChecksum = checksum(originalFileContentBuffer);
+        const zippedFileContentBuffer = zipFile.getEntry(file).getData();
+        const zippedChecksum = checksum(zippedFileContentBuffer);
+        const checksumMatch = originalChecksum === zippedChecksum;
+        if (!checksumMatch) checksumMismatches.push([chalk.red(file), chalk.yellow(originalChecksum), chalk.yellow(zippedChecksum)]);
+        const data = {
+            dirs: parsed.dir
+                .split("/")
+                .filter((dir) => dir !== "")
+                .map((dir) => chalk.yellow(dir)),
+            file: checksumMatch ? chalk.green(parsed.base) : chalk.red(parsed.base),
+            checksumMatch,
+        };
+        _.set(
+            fileTree,
+            [...data.dirs, data.file],
+            chalk.gray(
+                [
+                    isBinaryFileSync(zippedFileContentBuffer) ? "Bináris fájl" : `${zippedFileContentBuffer.toString().split("\n").length} sor`,
+                    `eredeti méret: ${filesize(Buffer.byteLength(zippedFileContentBuffer))}`,
+                ].join(", ")
+            )
+        );
     }
-    console.log(indentString(table(checksumTable, tableconfig), 4));
+
+    const order = (obj) => {
+        obj = _.fromPairs(
+            _.toPairs(obj).sort((a, b) => {
+                if (_.isString(a[1]) && _.isObject(b[1])) return 1;
+                else if (_.isObject(a[1]) && _.isString(b[1])) return -1;
+                return stripAnsi(a[0]).localeCompare(stripAnsi(b[0]));
+            })
+        );
+        for (const key of Object.keys(obj)) if (_.isObject(obj[key])) obj[key] = order(obj[key]);
+        return obj;
+    };
+
+    fileTree = order(fileTree);
+
+    console.log(indentString(chalk.yellow(zipPath), 4));
+    console.log(indentString(treeify(fileTree), 4));
+    console.log(" ");
 
     console.log(
         indentString(
             chalk.white(
-                `Ha egy fájl neve mellett a ${chalk.green(
-                    "SÉRTETLEN"
-                )} jelző szerepel, az azt jelenti, hogy az ellenőrzés alapján sértetlenül be lett csomagolva a zip-be.`
+                `* Ha egy fájl neve ${chalk.green(
+                    "zöld"
+                )}, az azt jelenti, hogy a fájl az ellenőrzés alapján sértetlenül be lett csomagolva a zip-be.`
             ),
             4
         )
     );
+    console.log(indentString("* A zippelő csak azt ellenőrizte, hogy a fájl sértetlenül lett-e becsomagolva, a tartalmát nem!", 4));
 
-    if (checksumMismatch) {
+    if (checksumMismatches.length > 0) {
+        console.log(" ");
+        console.log(
+            indentString(chalk.bgRed.white(`${chalk.bold("FIGYELEM!")} Az alábbi fájlok az ellenőrzés során sérültnek bizonyultak:`), 4)
+        );
         console.log(
             indentString(
-                chalk.bgRed.white(
-                    `${chalk.bold("FIGYELEM!")} Úgy érzékeltük, hogy legalább egy fájl sérült lehet. Próbáld újra a becsomagolást!`
-                )
-            ),
-            4
+                table([["Fájl", "Eredeti fájl ellenőrző összege", "Zippelt fájl ellenőrző összege"], ...checksumMismatches], tableConfig),
+                4
+            )
+        );
+        console.log(
+            indentString(
+                chalk.red("Elképzelhető, hogy a probléma megoldható azzal, ha bezárod azokat a programokat, amelyek használhatják a fájlokat."),
+                4
+            )
+        );
+        console.log(
+            indentString(
+                chalk.red("Az is előfordulhat, hogy ez egy egyszeri, váratlan hiba volt, és a következő próbálkozásnál már minden jó lesz."),
+                4
+            )
         );
     }
 };
@@ -307,7 +359,7 @@ const handleZipping = async ({ name, neptun }) => {
     const files = await collectFiles();
     console.log(chalk.green("OK."));
 
-    await zipFiles(files, { name, neptun });
+    return await zipFiles(files, { name, neptun });
 };
 
 (async () => {
@@ -318,7 +370,12 @@ const handleZipping = async ({ name, neptun }) => {
 
         console.log(chalk.bgGray.black("2. lépés: Becsomagolás"));
         console.log(" ");
-        await handleZipping({ name, neptun });
+        const { zippedFiles, zipPath } = await handleZipping({ name, neptun });
+
+        console.log(" ");
+        console.log(chalk.bgGray.black("3. lépés: Ellenőrzés"));
+        console.log(" ");
+        await checkZip(zippedFiles, zipPath);
 
         // Tudnivalók megjelenítése
         console.log(" ");

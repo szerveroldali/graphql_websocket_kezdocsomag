@@ -54,12 +54,12 @@ Miután telepítetted az NPM-es csomagokat, az alábbi parancsok érhetők el a 
 - GraphQL:
   - `npm run gql:db`: Migrációk és a seeder futtatása nulláról (tiszta adatbázis)
   - `npm run gql:dev`: GraphQL szerver futtatása (fejlesztői)
-  - `npm run gql:test`: Automata tesztelő futtatása a GraphQL feladatra
-  - `npm run gql:test 1 2`: Automata tesztelő futtatása a GraphQL feladat konkrét részfeladataira a feladatok sorszáma alapján
+  - `npm run gql:test`: Automata tesztelő futtatása a GraphQL feladat összes részfeladatára
+  - `npm run gql:test 1 2`: Automata tesztelő futtatása a GraphQL feladat konkrét részfeladataira a feladatok sorszáma alapján (pl. itt az 1. és a 2. feladatra)
 - Websocket:
   - `npm run ws:dev`: Websocket (Socket.IO) szerver futtatása (fejlesztői)
-  - `npm run ws:test`: Automata tesztelő futtatása a Websocket feladatra
-  - `npm run ws:test 1 2`: Automata tesztelő futtatása a Websocket feladat konkrét részfeladataira a feladatok sorszáma alapján
+  - `npm run ws:test`: Automata tesztelő futtatása a Websocket feladat összes részfeladatára
+  - `npm run ws:test 1 2`: Automata tesztelő futtatása a Websocket feladat konkrét részfeladataira a feladatok sorszáma alapján (pl. itt az 1. és a 2. feladatra)
 - `npm run zip`: ZH becsomagolása (automatikus nyilatkozat ellenőrzéssel és kitöltéssel)
 - `npm run prettier`: A projektben lévő összes `.js`, `.json` és `.graphql` fájl formázása Prettier-el
 
@@ -121,11 +121,11 @@ Az alábbiakat vedd figyelembe a tesztelő használatakor:
 
 ## Automatikus zippelő, beadás
 
-A zárthelyihez automatikus zippelőt biztosítunk, ami segít gyorsan és megfelelően kitölteni a nyilatkozatot, valamint összegyűjteni és becsomagolni a beadáshoz szükséges fájlokat.
+A zárthelyihez automatikus zippelőt biztosítunk, ami segít gyorsan és megfelelően kitölteni a nyilatkozatot, valamint összegyűjti és becsomagolja a beadáshoz szükséges fájlokat.
 
 A program először ellenőrzi, hogy létezik-e már szabályosan kitöltött `statement.txt`. Ha nem, akkor felkínálja a nyilatkozatot elfogadásra, majd segít azt kitölteni. Ha a nyilatkozatfájl érvényes, akkor ezt a részt onnantól átugorja. Végül becsomagolja a fájlokat:
 
-![Zipper](https://i.imgur.com/EPTy6GW.png)
+![Zipper](https://i.imgur.com/aAVuTxe.png)
 
 Az alábbiakat vedd figyelembe a zippelő használatakor, illetve a beadásnál:
 
